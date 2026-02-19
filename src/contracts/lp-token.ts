@@ -111,8 +111,8 @@ export class LPTokenClient {
     ]);
 
     return {
-      name: nameResult?.str() ?? 'CoralSwap LP',
-      symbol: symbolResult?.str() ?? 'CORAL-LP',
+      name: nameResult?.str().toString() ?? 'CoralSwap LP',
+      symbol: symbolResult?.str().toString() ?? 'CORAL-LP',
       decimals: decimalsResult?.u32() ?? 7,
     };
   }
