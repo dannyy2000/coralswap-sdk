@@ -4,6 +4,7 @@ import { TradeType } from '../types/common';
 import { SwapRequest, SwapQuote, SwapResult, HopResult } from '../types/swap';
 import { PRECISION, DEFAULTS } from '../config';
 import { PairNotFoundError, ValidationError, InsufficientLiquidityError } from '../errors';
+import { PairClient } from '../contracts/pair';
 
 /**
  * Swap module -- builds, quotes, and executes token swaps.

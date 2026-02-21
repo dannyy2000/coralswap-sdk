@@ -148,6 +148,10 @@ export class LiquidityModule {
   ): Promise<LPPosition> {
     const pair = this.client.pair(pairAddress);
     const reserves = await pair.getReserves();
+    const [reserves] = await Promise.all([
+      pair.getReserves(),
+      pair.getTokens(),
+    ]);
 
     // Determine LP token address from pair state
     const lpTokenAddress = pairAddress; // LP token is co-located in V1
