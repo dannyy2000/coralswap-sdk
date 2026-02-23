@@ -89,6 +89,11 @@ export {
   withRetry,
   isRetryable,
   sleep,
+  validateAddress,
+  validatePositiveAmount,
+  validateNonNegativeAmount,
+  validateSlippage,
+  validateDistinctTokens,
 } from './utils';
 export type { RetryConfig } from './utils';
 
