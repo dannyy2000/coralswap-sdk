@@ -17,6 +17,8 @@ export {
   isValidContractId,
   isValidAddress,
   isNativeToken,
+  getNativeAssetContractAddress,
+  resolveTokenIdentifier,
   sortTokens,
   truncateAddress,
   toScAddress,

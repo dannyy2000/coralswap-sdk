@@ -1,4 +1,4 @@
-import { Address, StrKey, hash, xdr } from '@stellar/stellar-sdk';
+import { Address, StrKey, hash, xdr, Asset } from '@stellar/stellar-sdk';
 
 /**
  * Address utilities for Stellar/Soroban address handling.
@@ -51,6 +51,36 @@ export function isNativeToken(identifier: string): boolean {
   }
 
   return upper === 'XLM' || upper === 'NATIVE';
+}
+
+/**
+ * Return the Stellar Asset Contract (SAC) address for native XLM on the given network.
+ *
+ * The contract ID is derived deterministically from the network passphrase.
+ * Use this when you need the on-chain contract address for the native asset (e.g. for
+ * Router or Pair interactions). The contract must exist on the network (SAC is
+ * deployed by the network).
+ */
+export function getNativeAssetContractAddress(networkPassphrase: string): string {
+  const native = Asset.native();
+  return native.contractId(networkPassphrase);
+}
+
+/**
+ * Resolve a token identifier to an on-chain contract address.
+ *
+ * If the identifier is a native token label (e.g. "XLM" or "native"), returns the
+ * Stellar Asset Contract address for the given network. Otherwise returns the
+ * identifier unchanged (assumed to be already a contract address).
+ */
+export function resolveTokenIdentifier(
+  identifier: string,
+  networkPassphrase: string,
+): string {
+  if (isNativeToken(identifier)) {
+    return getNativeAssetContractAddress(networkPassphrase);
+  }
+  return identifier;
 }
 
 /**
