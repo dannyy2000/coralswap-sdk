@@ -51,20 +51,18 @@ describe('Network Switching', () => {
             // but let's assume it's empty and we check if the cache is cleared.
         });
 
-        // Mock factoryAddress if needed
-        (client as any).networkConfig.factoryAddress = 'CC...';
+        // Use valid contract IDs so Factory constructor does not throw
+        const factoryAddr1 = 'CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM';
+        const factoryAddr2 = 'CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4';
+        (client as any).networkConfig.factoryAddress = factoryAddr1;
 
         const factory1 = client.factory;
         expect(factory1).toBeDefined();
 
         client.setNetwork(Network.MAINNET);
 
-        // After reset, checking if the private field is null would be best, 
-        // but we can check if a new access creates a new instance.
-        // However, since we can't easily check private fields in TS tests without casting,
-        // let's just verify properties of the new client are updated if we had different addresses.
-
-        (client as any).networkConfig.factoryAddress = 'DD...';
+        // After reset, a new access creates a new instance with the new config
+        (client as any).networkConfig.factoryAddress = factoryAddr2;
         const factory2 = client.factory;
         expect(factory2).not.toBe(factory1);
     });
