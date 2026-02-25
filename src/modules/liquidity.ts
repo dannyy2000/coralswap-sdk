@@ -23,6 +23,7 @@ import {
  */
 export class LiquidityModule {
   private client: CoralSwapClient;
+  private lpTokenCache: Map<string, string> = new Map();
 
   constructor(client: CoralSwapClient) {
     this.client = client;
@@ -192,8 +193,13 @@ export class LiquidityModule {
     const pair = this.client.pair(pairAddress);
     const reserves = await pair.getReserves();
 
-    // Determine LP token address from pair state
-    const lpTokenAddress = pairAddress; // LP token is co-located in V1
+    // Retrieve LP token address from cache or fetch from pair contract
+    let lpTokenAddress = this.lpTokenCache.get(pairAddress);
+    if (!lpTokenAddress) {
+      lpTokenAddress = await pair.getLPTokenAddress();
+      this.lpTokenCache.set(pairAddress, lpTokenAddress);
+    }
+
     const lpClient = this.client.lpToken(lpTokenAddress);
 
     const [balance, totalSupply] = await Promise.all([
