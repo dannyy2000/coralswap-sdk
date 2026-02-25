@@ -4,13 +4,17 @@ import { FeeState, FlashLoanConfig } from '../types/pool';
 /**
  * Helper function to extract value from ScMap by key.
  */
-function getScMapValue(map: any, key: string): xdr.ScVal {
+function getScMapValue(map: xdr.ScMapEntry[], key: string): xdr.ScVal {
   if (!map) {
     throw new Error('Map is null');
   }
-  for (let i = 0; i < map.length; i++) {
-    const entry = map.get(i)!;
-    if (entry.key().str() === key) {
+  for (const entry of map) {
+    const k = entry.key();
+    const tag = k.switch().name;
+    if (tag === 'scvString' && k.str().toString() === key) {
+      return entry.val();
+    }
+    if (tag === 'scvSymbol' && k.sym().toString() === key) {
       return entry.val();
     }
   }
