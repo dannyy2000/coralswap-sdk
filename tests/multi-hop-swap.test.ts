@@ -70,9 +70,9 @@ function buildMockClient(
 // Token / pair fixtures
 // ---------------------------------------------------------------------------
 
-const TOKEN_A = 'GAAA';
-const TOKEN_B = 'GBBB';
-const TOKEN_C = 'GCCC';
+const TOKEN_A = 'GDLL5G53N6YD5BBGRFCW6WSZ3BHIQ3L7FO4RBYER3IH7NCCMU7GCAXC6';
+const TOKEN_B = 'GBPJWOMRQSBSC2Q42IXL42FBVEKACCP4PXFN7FULA3O3KBJZ4UGYBLJW';
+const TOKEN_C = 'GBAQBA53DB3OJK72UAAOD5HJO6QOMUEKV5WMS22DKPGXRY2QIIKGZWOD';
 
 // Balanced pools with 30bps fee
 const RESERVE = 1_000_000_000n;
@@ -144,7 +144,7 @@ describe('Multi-hop swap routing', () => {
     });
 
     it('throws PairNotFoundError if a pair does not exist in the path', async () => {
-      const TOKEN_D = 'GDDD';
+      const TOKEN_D = 'GDULNI7CP3QNPLXUDIXWLAX633PGS5QUOH5BWM2W6XLBEH5GUVMPXUPL';
       await expect(
         swap.computeHops(1_000_000n, [TOKEN_A, TOKEN_B, TOKEN_D]),
       ).rejects.toBeInstanceOf(PairNotFoundError);
@@ -245,13 +245,14 @@ describe('Multi-hop swap routing', () => {
     });
 
     it('throws PairNotFoundError when a pair in the path does not exist', async () => {
+      const TOKEN_D = 'GDULNI7CP3QNPLXUDIXWLAX633PGS5QUOH5BWM2W6XLBEH5GUVMPXUPL';
       await expect(
         swap.getQuote({
           tokenIn: TOKEN_A,
-          tokenOut: 'GDDD',
+          tokenOut: TOKEN_D,
           amount: 1_000_000n,
           tradeType: TradeType.EXACT_IN,
-          path: [TOKEN_A, TOKEN_B, 'GDDD'],
+          path: [TOKEN_A, TOKEN_B, TOKEN_D],
         }),
       ).rejects.toBeInstanceOf(PairNotFoundError);
     });

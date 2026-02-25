@@ -12,6 +12,9 @@ import {
 import { PRECISION, DEFAULTS } from '../config';
 import {
   TransactionError,
+  ValidationError,
+  PairNotFoundError,
+  InsufficientLiquidityError,
 } from '../errors';
 import {
   validateAddress,
@@ -63,7 +66,7 @@ export class SwapModule {
       return this.getDirectQuote(request, path);
     }
 
-    return this.getMultiHopQuote(request, path);
+    return this.getMultiHopQuoteInternal(request, path);
   }
 
   /**
@@ -98,21 +101,21 @@ export class SwapModule {
       op =
         request.tradeType === TradeType.EXACT_IN
           ? this.client.router.buildSwapExactIn(
-              request.to ?? this.client.publicKey,
-              request.tokenIn,
-              request.tokenOut,
-              quote.amountIn,
-              quote.amountOutMin,
-              quote.deadline,
-            )
+            request.to ?? this.client.publicKey,
+            request.tokenIn,
+            request.tokenOut,
+            quote.amountIn,
+            quote.amountOutMin,
+            quote.deadline,
+          )
           : this.client.router.buildSwapExactOut(
-              request.to ?? this.client.publicKey,
-              request.tokenIn,
-              request.tokenOut,
-              quote.amountOut,
-              quote.amountIn,
-              quote.deadline,
-            );
+            request.to ?? this.client.publicKey,
+            request.tokenIn,
+            request.tokenOut,
+            quote.amountOut,
+            quote.amountIn,
+            quote.deadline,
+          );
     }
 
     const result = await this.client.submitTransaction([op]);
@@ -393,7 +396,7 @@ export class SwapModule {
    *   totalFeeAmount = sum of per-hop fee amounts (denominated in each hop's tokenIn)
    *   compoundImpact = 1 - product((1 - impact_i/10000)) expressed in bps
    */
-  private async getMultiHopQuote(
+  private async getMultiHopQuoteInternal(
     request: SwapRequest,
     path: string[],
   ): Promise<SwapQuote> {

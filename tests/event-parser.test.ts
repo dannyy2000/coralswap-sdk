@@ -58,10 +58,10 @@ function makeDiagnosticEvent(
 ): xdr.DiagnosticEvent {
   const topics = [symbolVal(topic)];
   const bodyV0 = new xdr.ContractEventV0({ topics, data });
-  const body = xdr.ContractEventBody.contractEventBodyV0(bodyV0);
+  const body = new (xdr.ContractEventBody as any)(0, bodyV0);
 
   const contractEvent = new xdr.ContractEvent({
-    ext: xdr.ExtensionPoint.extensionPointVoid(),
+    ext: new (xdr.ExtensionPoint as any)(0),
     contractId: contractBuf,
     type: xdr.ContractEventType.contract(),
     body,

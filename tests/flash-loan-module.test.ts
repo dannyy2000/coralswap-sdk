@@ -16,11 +16,11 @@ describe("FlashLoanModule", () => {
   const TEST_SECRET =
     "SB6K2AINTGNYBFX4M7TRPGSKQ5RKNOXXWB7UZUHRYOVTM7REDUGECKZU";
   const TEST_PAIR_ADDRESS =
-    "CDUMMYPAIRADDRESSFORTEST1234567890ABCDEFGHIJKLMNOP";
+    "CBQHNAXSI55GX2GN6D67GK7BHVPSLJUGZQEU7WJ5LKR5PNUCGLIMAO4K";
   const TEST_TOKEN_ADDRESS =
-    "CDUMMYTOKENADDRESSFORTEST1234567890ABCDEFGHIJKLMNO";
+    "CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC";
   const TEST_RECEIVER_ADDRESS =
-    "CDUMMYRECEIVERADDRESSTEST1234567890ABCDEFGHIJKLMNO";
+    "GBAQBA53DB3OJK72UAAOD5HJO6QOMUEKV5WMS22DKPGXRY2QIIKGZWOD";
 
   let client: CoralSwapClient;
   let flashLoanModule: FlashLoanModule;
@@ -179,16 +179,16 @@ describe("FlashLoanModule", () => {
       ).rejects.toThrow("Flash loans are currently disabled for this pair");
     });
 
-    it("handles zero amount correctly", async () => {
+    it("handles small amount correctly", async () => {
       mockPairClient.getFlashLoanConfig.mockResolvedValue(mockConfig);
 
       const estimate = await flashLoanModule.estimateFee(
         TEST_PAIR_ADDRESS,
         TEST_TOKEN_ADDRESS,
-        0n,
+        1n,
       );
 
-      // Fee = (0 * 9) / 10000 = 0
+      // Fee = (1 * 9) / 10000 = 0 (floor)
       // Floor = 100
       // Actual fee = max(0, 100) = 100
       expect(estimate.feeAmount).toBe(100n);
@@ -267,7 +267,7 @@ describe("FlashLoanModule", () => {
   describe("getMaxBorrowable()", () => {
     const mockTokens = {
       token0: TEST_TOKEN_ADDRESS,
-      token1: "CTOKEN1ADDRESSFORTEST1234567890ABCDEFGHIJKLMNOPQRST",
+      token1: "GDLMWRV6Z25R2R4P6XG6Y77J3V6E5X6G5X6G5X6G5X6G5X6G5X6G5X6G",
     };
 
     it("returns reserve - 1% margin for token0", async () => {
