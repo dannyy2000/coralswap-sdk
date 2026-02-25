@@ -1,8 +1,8 @@
 import { z } from 'zod';
-import { CoralSwapClient } from '../client';
-import { Network } from '../types/common';
-import { Token, TokenList } from '../types/tokens';
-import { NetworkError, ValidationError } from '../errors';
+import { CoralSwapClient } from '@/client';
+import { Network } from '@/types/common';
+import { Token, TokenList } from '@/types/tokens';
+import { NetworkError, ValidationError } from '@/errors';
 
 // ---------------------------------------------------------------------------
 // Zod schemas — validates token list JSON against Stellar token list standard

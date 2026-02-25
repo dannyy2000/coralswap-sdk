@@ -5,14 +5,14 @@ import {
   Transaction,
   xdr,
 } from '@stellar/stellar-sdk';
-import { CoralSwapConfig, NetworkConfig, NETWORK_CONFIGS, DEFAULTS } from './config';
-import { Network, Result, Logger, Signer } from './types/common';
-import { SignerError } from './errors';
-import { FactoryClient } from './contracts/factory';
-import { PairClient } from './contracts/pair';
-import { RouterClient } from './contracts/router';
-import { LPTokenClient } from './contracts/lp-token';
-import { TokenListModule } from './modules/tokens';
+import { CoralSwapConfig, NetworkConfig, NETWORK_CONFIGS, DEFAULTS } from '@/config';
+import { Network, Result, Logger, Signer } from '@/types/common';
+import { SignerError } from '@/errors';
+import { FactoryClient } from '@/contracts/factory';
+import { PairClient } from '@/contracts/pair';
+import { RouterClient } from '@/contracts/router';
+import { LPTokenClient } from '@/contracts/lp-token';
+import { TokenListModule } from '@/modules/tokens';
 
 /**
  * Default signer implementation that wraps a Stellar Keypair.

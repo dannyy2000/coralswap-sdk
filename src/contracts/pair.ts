@@ -1,5 +1,5 @@
 import { Contract, SorobanRpc, TransactionBuilder, xdr, Address, nativeToScVal } from '@stellar/stellar-sdk';
-import { FeeState, FlashLoanConfig } from '../types/pool';
+import { FeeState, FlashLoanConfig } from '@/types/pool';
 
 /**
  * Helper function to extract value from ScMap by key.

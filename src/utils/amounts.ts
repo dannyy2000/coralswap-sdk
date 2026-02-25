@@ -1,4 +1,4 @@
-import { PRECISION } from '../config';
+import { PRECISION } from '@/config';
 
 /**
  * Amount utilities for Soroban i128 arithmetic.

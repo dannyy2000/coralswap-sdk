@@ -1,19 +1,19 @@
-import { CoralSwapClient } from '../client';
+import { CoralSwapClient } from '@/client';
 import {
   AddLiquidityRequest,
   RemoveLiquidityRequest,
   LiquidityResult,
   AddLiquidityQuote,
-} from '../types/liquidity';
-import { LPPosition } from '../types/pool';
-import { PRECISION } from '../config';
-import { TransactionError, ValidationError } from '../errors';
+} from '@/types/liquidity';
+import { LPPosition } from '@/types/pool';
+import { PRECISION } from '@/config';
+import { TransactionError, ValidationError } from '@/errors';
 import {
   validateAddress,
   validatePositiveAmount,
   validateNonNegativeAmount,
   validateDistinctTokens,
-} from '../utils/validation';
+} from '@/utils/validation';
 
 /**
  * Liquidity module -- manages LP positions in CoralSwap pools.

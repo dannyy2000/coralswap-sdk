@@ -9,8 +9,8 @@ import {
   BurnEvent,
   SyncEvent,
   FeeUpdateEvent,
-} from '../types/events';
-import { ValidationError } from '../errors';
+} from '@/types/events';
+import { ValidationError } from '@/errors';
 
 // ---------------------------------------------------------------------------
 // Known event topic symbols emitted by CoralSwap Pair contracts

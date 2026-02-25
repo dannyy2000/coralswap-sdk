@@ -1,4 +1,4 @@
-import { Network, Logger, Signer } from './types/common';
+import { Network, Logger, Signer } from '@/types/common';
 
 /**
  * Contract addresses per network deployment.
