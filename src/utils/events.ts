@@ -9,8 +9,13 @@ import {
   BurnEvent,
   SyncEvent,
   FeeUpdateEvent,
-} from '../types/events';
-import { ValidationError } from '../errors';
+} from '@/types/events';
+import { ValidationError } from '@/errors';
+
+type TxWithOptionalHash = SorobanRpc.Api.GetSuccessfulTransactionResponse & {
+  hash?: string;
+  id?: string;
+};
 
 type TxWithOptionalHash = SorobanRpc.Api.GetSuccessfulTransactionResponse & {
   hash?: string;
@@ -234,8 +239,7 @@ export class EventParser {
     const meta = response.resultMetaXdr;
     const v3 = meta.v3();
     const diagnosticEvents = v3.sorobanMeta()?.diagnosticEvents() ?? [];
-    const tx = response as TxWithOptionalHash;
-    const txHash = tx.hash ?? tx.id ?? '';
+    const txHash = (response as any).hash ?? '';
     const ledger = response.ledger ?? 0;
     return this.parse(diagnosticEvents, txHash, ledger);
   }

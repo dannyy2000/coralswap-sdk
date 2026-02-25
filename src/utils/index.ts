@@ -19,6 +19,7 @@ export {
   sortTokens,
   truncateAddress,
   toScAddress,
+  getPairAddress,
 } from './addresses';
 
 export {
@@ -27,6 +28,8 @@ export {
   getResourceEstimate,
   exceedsBudget,
 } from './simulation';
+
+export type { SimulationResult, SimulationResourceEstimate } from './simulation';
 
 export {
   withRetry,

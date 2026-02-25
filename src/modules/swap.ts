@@ -1,6 +1,6 @@
-import { CoralSwapClient } from '../client';
-import { PairClient } from '../contracts/pair';
-import { TradeType } from '../types/common';
+import { CoralSwapClient } from '@/client';
+import { PairClient } from '@/contracts/pair';
+import { TradeType } from '@/types/common';
 import {
   SwapRequest,
   SwapQuote,
@@ -8,8 +8,8 @@ import {
   HopResult,
   MultiHopSwapRequest,
   MultiHopSwapQuote,
-} from '../types/swap';
-import { PRECISION, DEFAULTS } from '../config';
+} from '@/types/swap';
+import { PRECISION, DEFAULTS } from '@/config';
 import {
   TransactionError,
   ValidationError,
@@ -21,7 +21,7 @@ import {
   validatePositiveAmount,
   validateSlippage,
   validateDistinctTokens,
-} from '../utils/validation';
+} from '@/utils/validation';
 
 /**
  * Swap module -- builds, quotes, and executes token swaps.
@@ -66,7 +66,7 @@ export class SwapModule {
       return this.getDirectQuote(request, path);
     }
 
-    return this.getMultiHopQuoteInternal(request, path);
+    return this.getMultiHopSwapQuote(request, path);
   }
 
   /**
@@ -396,7 +396,7 @@ export class SwapModule {
    *   totalFeeAmount = sum of per-hop fee amounts (denominated in each hop's tokenIn)
    *   compoundImpact = 1 - product((1 - impact_i/10000)) expressed in bps
    */
-  private async getMultiHopQuoteInternal(
+  private async getMultiHopSwapQuote(
     request: SwapRequest,
     path: string[],
   ): Promise<SwapQuote> {
