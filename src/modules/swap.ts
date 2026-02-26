@@ -21,8 +21,8 @@ import {
   validatePositiveAmount,
   validateSlippage,
   validateDistinctTokens,
-  isValidPath,
-} from '../utils/validation';
+} from '@/utils/validation';
+import { resolveTokenIdentifier } from '@/utils/addresses';
 
 
 /**
@@ -51,12 +51,17 @@ export class SwapModule {
    */
   async getQuote(request: SwapRequest): Promise<SwapQuote> {
     validatePositiveAmount(request.amount, 'amount');
-    validateAddress(request.tokenIn, 'tokenIn');
-    validateAddress(request.tokenOut, 'tokenOut');
-    validateDistinctTokens(request.tokenIn, request.tokenOut);
+
+    const passphrase = this.client.networkConfig.networkPassphrase;
+    const tokenIn = resolveTokenIdentifier(request.tokenIn, passphrase);
+    const tokenOut = resolveTokenIdentifier(request.tokenOut, passphrase);
+    validateAddress(tokenIn, 'tokenIn');
+    validateAddress(tokenOut, 'tokenOut');
+    validateDistinctTokens(tokenIn, tokenOut);
     if (request.slippageBps !== undefined) validateSlippage(request.slippageBps);
 
-    const path = this.resolvePath(request);
+    const rawPath = this.resolvePath(request);
+    const path = rawPath.map((t) => resolveTokenIdentifier(t, passphrase));
 
     if (!isValidPath(path)) {
       throw new ValidationError(
@@ -80,12 +85,17 @@ export class SwapModule {
    */
   async execute(request: SwapRequest): Promise<SwapResult> {
     validatePositiveAmount(request.amount, 'amount');
-    validateAddress(request.tokenIn, 'tokenIn');
-    validateAddress(request.tokenOut, 'tokenOut');
-    validateDistinctTokens(request.tokenIn, request.tokenOut);
+
+    const passphrase = this.client.networkConfig.networkPassphrase;
+    const tokenIn = resolveTokenIdentifier(request.tokenIn, passphrase);
+    const tokenOut = resolveTokenIdentifier(request.tokenOut, passphrase);
+    validateAddress(tokenIn, 'tokenIn');
+    validateAddress(tokenOut, 'tokenOut');
+    validateDistinctTokens(tokenIn, tokenOut);
     if (request.slippageBps !== undefined) validateSlippage(request.slippageBps);
 
-    const path = this.resolvePath(request);
+    const rawPath = this.resolvePath(request);
+    const path = rawPath.map((t) => resolveTokenIdentifier(t, passphrase));
     const quote = await this.getQuote(request);
 
     let op: import("@stellar/stellar-sdk").xdr.Operation;
@@ -104,16 +114,16 @@ export class SwapModule {
         request.tradeType === TradeType.EXACT_IN
           ? this.client.router.buildSwapExactIn(
               request.to ?? this.client.publicKey,
-              request.tokenIn,
-              request.tokenOut,
+              tokenIn,
+              tokenOut,
               quote.amountIn,
               quote.amountOutMin,
               quote.deadline,
             )
           : this.client.router.buildSwapExactOut(
               request.to ?? this.client.publicKey,
-              request.tokenIn,
-              request.tokenOut,
+              tokenIn,
+              tokenOut,
               quote.amountOut,
               quote.amountIn,
               quote.deadline,
@@ -154,7 +164,8 @@ export class SwapModule {
    * @throws {PairNotFoundError} If any intermediate pair does not exist.
    */
   async getMultiHopQuote(request: MultiHopSwapRequest): Promise<MultiHopSwapQuote> {
-    const { path } = request;
+    const passphrase = this.client.networkConfig.networkPassphrase;
+    const path = request.path.map((t) => resolveTokenIdentifier(t, passphrase));
 
     if (!isValidPath(path) || path.length < 3) {
       throw new ValidationError(
@@ -162,6 +173,8 @@ export class SwapModule {
         { path },
       );
     }
+
+    path.forEach((addr, i) => validateAddress(addr, `path[${i}]`));
 
     if (request.tradeType !== TradeType.EXACT_IN) {
       throw new ValidationError(
@@ -214,7 +227,7 @@ export class SwapModule {
 
     const op = this.client.router.buildSwapExactTokensForTokens(
       request.to ?? this.client.publicKey,
-      request.path,
+      quote.path,
       quote.amountIn,
       quote.amountOutMin,
       quote.deadline,
