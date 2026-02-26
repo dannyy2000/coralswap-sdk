@@ -42,7 +42,6 @@ export class CoralSwapClient {
   private _factory: FactoryClient | null = null;
   private _router: RouterClient | null = null;
   private _factoryModule: FactoryModule | null = null;
-  private _poller: TransactionPoller | null = null;
   private readonly logger?: Logger;
 
   /**
