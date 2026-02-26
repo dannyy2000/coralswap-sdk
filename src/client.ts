@@ -44,6 +44,7 @@ export class CoralSwapClient {
   private _publicKeyCache: string | null = null;
   private _factory: FactoryClient | null = null;
   private _router: RouterClient | null = null;
+  private _factoryModule: FactoryModule | null = null;
   private readonly logger?: Logger;
 
   /**
@@ -186,6 +187,11 @@ export class CoralSwapClient {
     this._factory = null;
     this._router = null;
 
+    // Reset factory module cache
+    if (this._factoryModule) {
+      this._factoryModule.clearCache();
+    }
+
     // Refresh signer if using built-in KeypairSigner
     if (this.config.secretKey) {
       const kpSigner = new KeypairSigner(
@@ -221,10 +227,20 @@ export class CoralSwapClient {
   }
 
   /**
+   * Access the Factory module (cached lookups).
+   */
+  factoryModule(): FactoryModule {
+    if (!this._factoryModule) {
+      this._factoryModule = new FactoryModule(this);
+    }
+    return this._factoryModule;
+  }
+
+  /**
    * Lookup the pair address for a token pair via the factory.
    */
   async getPairAddress(tokenA: string, tokenB: string): Promise<string | null> {
-    return this.factory.getPair(tokenA, tokenB);
+    return this.factoryModule().getPairAddress(tokenA, tokenB);
   }
 
   /**
