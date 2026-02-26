@@ -1,4 +1,4 @@
-import { ValidationError } from '../errors';
+import { ValidationError } from '@/errors';
 import { isValidAddress } from './addresses';
 
 /**
@@ -86,4 +86,25 @@ export function validateDistinctTokens(tokenIn: string, tokenOut: string): void 
       { tokenIn, tokenOut },
     );
   }
+}
+
+/**
+ * Check whether a swap path is structurally valid.
+ *
+ * A valid path:
+ * - contains at least two token identifiers
+ * - has no identical adjacent tokens (no-op hops)
+ */
+export function isValidPath(path: readonly string[]): boolean {
+  if (!Array.isArray(path) || path.length < 2) {
+    return false;
+  }
+
+  for (let i = 0; i < path.length - 1; i++) {
+    if (path[i] === path[i + 1]) {
+      return false;
+    }
+  }
+
+  return true;
 }

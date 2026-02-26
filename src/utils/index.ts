@@ -1,5 +1,6 @@
 export {
   toSorobanAmount,
+  parseTokenAmount,
   fromSorobanAmount,
   formatAmount,
   toBps,
@@ -9,15 +10,19 @@ export {
   safeDiv,
   minBigInt,
   maxBigInt,
-} from './amounts';
+} from "./amounts";
 
 export {
   isValidPublicKey,
   isValidContractId,
   isValidAddress,
+  isNativeToken,
+  getNativeAssetContractAddress,
+  resolveTokenIdentifier,
   sortTokens,
   truncateAddress,
   toScAddress,
+  getPairAddress,
 } from './addresses';
 
 export {
@@ -25,7 +30,9 @@ export {
   getSimulationReturnValue,
   getResourceEstimate,
   exceedsBudget,
-} from './simulation';
+} from "./simulation";
+
+export type { SimulationResult, SimulationResourceEstimate } from './simulation';
 
 export {
   withRetry,
@@ -33,7 +40,7 @@ export {
   sleep,
   RetryConfig,
   DEFAULT_RETRY_CONFIG,
-} from './retry';
+} from "./retry";
 
 export { Fraction, Percent, Rounding } from './math';
 
@@ -43,4 +50,8 @@ export {
   validateNonNegativeAmount,
   validateSlippage,
   validateDistinctTokens,
+  isValidPath,
 } from './validation';
+
+export { waitNextLedger } from './ledger';
+export type { WaitNextLedgerOptions } from './ledger';

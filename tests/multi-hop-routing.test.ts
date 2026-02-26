@@ -6,6 +6,7 @@ import {
   InsufficientLiquidityError,
   ValidationError,
 } from '../src/errors';
+import { shufflePath } from './helpers';
 
 // ---------------------------------------------------------------------------
 // Mock helpers (same pattern as existing multi-hop-swap.test.ts)
@@ -44,6 +45,7 @@ function buildMockClient(
 
   return {
     config: { defaultSlippageBps: 50 },
+    networkConfig: { networkPassphrase: 'Test SDF Network ; September 2015' },
     getDeadline: jest.fn().mockReturnValue(9999999999),
     getPairAddress: jest.fn().mockImplementation(async (tokenA: string, tokenB: string) => {
       return lookupKey(tokenA, tokenB);
@@ -68,13 +70,15 @@ function buildMockClient(
 }
 
 // ---------------------------------------------------------------------------
-// Fixtures
+// Fixtures (valid Soroban contract IDs so path validation passes)
 // ---------------------------------------------------------------------------
 
-const TOKEN_A = 'GAAA';
-const TOKEN_B = 'GBBB';
-const TOKEN_C = 'GCCC';
-const TOKEN_D = 'GDDD';
+const TOKEN_A = 'CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM';
+const TOKEN_B = 'CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4';
+const TOKEN_C = 'CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M';
+const TOKEN_D = 'CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4';
+/** Valid contract ID not in any mock pair map (for "pair missing" tests) */
+const TOKEN_UNKNOWN = 'CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC';
 
 const RESERVE = 1_000_000_000n;
 const FEE = 30;
@@ -176,6 +180,19 @@ describe('Multi-hop routing (dedicated methods)', () => {
       expect(quote.path).toEqual([TOKEN_A, TOKEN_B, TOKEN_C]);
     });
 
+    it('shufflePath returns a shuffled copy without mutating original', () => {
+      const basePath = [TOKEN_A, TOKEN_B, TOKEN_C, TOKEN_D] as const;
+      const copy = [...basePath];
+
+      const shuffled = shufflePath(basePath, () => 0.42);
+
+      // Original is unchanged
+      expect(basePath).toEqual(copy);
+
+      // Shuffled path contains the same tokens (possibly in different order)
+      expect([...shuffled].sort()).toEqual([...basePath].sort());
+    });
+
     it('respects custom slippage tolerance', async () => {
       const slippageBps = 200; // 2%
       const quote = await swap.getMultiHopQuote({
@@ -212,7 +229,7 @@ describe('Multi-hop routing (dedicated methods)', () => {
     it('throws PairNotFoundError if any intermediate pair is missing', async () => {
       await expect(
         swap.getMultiHopQuote({
-          path: [TOKEN_A, TOKEN_B, 'GXXX'],
+          path: [TOKEN_A, TOKEN_B, TOKEN_UNKNOWN],
           amount: 1_000_000n,
           tradeType: TradeType.EXACT_IN,
         }),

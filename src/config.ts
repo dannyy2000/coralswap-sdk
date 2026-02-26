@@ -1,4 +1,5 @@
-import { Network, Logger, Signer } from './types/common';
+import { Network, Logger, Signer } from '@/types/common';
+import { PollingStrategy } from '@/utils/polling';
 
 /**
  * Contract addresses per network deployment.
@@ -15,18 +16,31 @@ export interface NetworkConfig {
  * SDK client configuration.
  */
 export interface CoralSwapConfig {
+  /** The Soroban network to connect to */
   network: Network;
+  /** Optional custom RPC URL to use */
   rpcUrl?: string;
+  /** Optional secret key for signing transactions */
   secretKey?: string;
+  /** Optional public key for the account */
   publicKey?: string;
   /** Optional logger for RPC request/response instrumentation. */
   logger?: Logger;
   /** External signer for wallet adapter pattern. Takes precedence over secretKey. */
   signer?: Signer;
+  /** Default slippage tolerance in basis points (0-10000) */
   defaultSlippageBps?: number;
+  /** Default transaction deadline in seconds from now */
   defaultDeadlineSec?: number;
+  /** Maximum number of retry attempts for failed RPC calls */
   maxRetries?: number;
+  /** Delay in milliseconds between retry attempts */
   retryDelayMs?: number;
+  pollingStrategy?: PollingStrategy;
+  pollingIntervalMs?: number;
+  maxPollingAttempts?: number;
+  pollingBackoffFactor?: number;
+  maxPollingIntervalMs?: number;
 }
 
 /**
@@ -34,17 +48,17 @@ export interface CoralSwapConfig {
  */
 export const NETWORK_CONFIGS: Record<Network, NetworkConfig> = {
   [Network.TESTNET]: {
-    rpcUrl: 'https://soroban-testnet.stellar.org',
-    networkPassphrase: 'Test SDF Network ; September 2015',
-    factoryAddress: '',
-    routerAddress: '',
+    rpcUrl: "https://soroban-testnet.stellar.org",
+    networkPassphrase: "Test SDF Network ; September 2015",
+    factoryAddress: "",
+    routerAddress: "",
     sorobanTimeout: 30,
   },
   [Network.MAINNET]: {
-    rpcUrl: 'https://soroban.stellar.org',
-    networkPassphrase: 'Public Global Stellar Network ; September 2015',
-    factoryAddress: '',
-    routerAddress: '',
+    rpcUrl: "https://soroban.stellar.org",
+    networkPassphrase: "Public Global Stellar Network ; September 2015",
+    factoryAddress: "",
+    routerAddress: "",
     sorobanTimeout: 30,
   },
 };
@@ -57,6 +71,11 @@ export const DEFAULTS = {
   deadlineSec: 1200,
   maxRetries: 3,
   retryDelayMs: 1000,
+  pollingStrategy: PollingStrategy.LINEAR,
+  pollingIntervalMs: 1000,
+  maxPollingAttempts: 30,
+  pollingBackoffFactor: 2,
+  maxPollingIntervalMs: 10000,
   flashFeeFloorBps: 5,
   feeMinBps: 10,
   feeMaxBps: 100,
@@ -66,6 +85,14 @@ export const DEFAULTS = {
   multiSigThreshold: 2,
   multiSigSigners: 3,
 } as const;
+
+/**
+ * Standard default slippage tolerance expressed in basis points.
+ *
+ * This value is used when applications do not provide an explicit
+ * `slippageBps` or `defaultSlippageBps` override.
+ */
+export const DEFAULT_SLIPPAGE = DEFAULTS.slippageBps;
 
 /**
  * Precision constants for Soroban i128 math.

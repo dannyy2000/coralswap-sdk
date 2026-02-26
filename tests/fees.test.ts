@@ -65,7 +65,7 @@ function createMockClient(opts: {
 // ---------------------------------------------------------------------------
 
 describe('FeeModule', () => {
-    const PAIR = 'CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC';
+    const PAIR = 'CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM';
 
     // -----------------------------------------------------------------------
     // estimateSwapFee()
@@ -86,9 +86,9 @@ describe('FeeModule', () => {
             const client = createMockClient({ feeBps: 30 });
             const module = new FeeModule(client);
 
-            const { feeAmount } = await module.estimateSwapFee(PAIR, 1n);
-
-            expect(feeAmount).toBe(0n);
+            await expect(module.estimateSwapFee(PAIR, 0n)).rejects.toThrow(
+                'amountIn must be greater than 0',
+            );
         });
 
         it('handles large amounts without overflow', async () => {
@@ -262,16 +262,12 @@ describe('FeeModule', () => {
     // -----------------------------------------------------------------------
     describe('compareFees()', () => {
         it('returns fee estimates for multiple pairs', async () => {
-            const pairs = [
-                'CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC',
-                'CBQHNAXSI55GX2GN6D67GK7BHVPSLJUGZQEU7WJ5LKR5PNUCGLIMAO4K',
-                'GDLL5G53N6YD5BBGRFCW6WSZ3BHIQ3L7FO4RBYER3IH7NCCMU7GCAXC6'
-            ];
+            const pairs = ['CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAMDR4', 'CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAOLZM', 'CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAARQG5'];
             const client = createMockClient({
                 pairs: {
-                    'CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC': { feeState: makeFeeState({ feeCurrent: 20 }) },
-                    'CBQHNAXSI55GX2GN6D67GK7BHVPSLJUGZQEU7WJ5LKR5PNUCGLIMAO4K': { feeState: makeFeeState({ feeCurrent: 50 }) },
-                    'GDLL5G53N6YD5BBGRFCW6WSZ3BHIQ3L7FO4RBYER3IH7NCCMU7GCAXC6': { feeState: makeFeeState({ feeCurrent: 80 }) },
+                    'CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAMDR4': { feeState: makeFeeState({ feeCurrent: 20 }) },
+                    'CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAOLZM': { feeState: makeFeeState({ feeCurrent: 50 }) },
+                    'CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAARQG5': { feeState: makeFeeState({ feeCurrent: 80 }) },
                 },
             });
             const module = new FeeModule(client);
@@ -282,27 +278,23 @@ describe('FeeModule', () => {
         });
 
         it('preserves input order in results', async () => {
-            const pairs = [
-                'CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC',
-                'CBQHNAXSI55GX2GN6D67GK7BHVPSLJUGZQEU7WJ5LKR5PNUCGLIMAO4K',
-                'GDLL5G53N6YD5BBGRFCW6WSZ3BHIQ3L7FO4RBYER3IH7NCCMU7GCAXC6'
-            ];
+            const pairs = ['CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM', 'CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4', 'CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M'];
             const client = createMockClient({
                 pairs: {
-                    'CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC': { feeState: makeFeeState({ feeCurrent: 10 }) },
-                    'CBQHNAXSI55GX2GN6D67GK7BHVPSLJUGZQEU7WJ5LKR5PNUCGLIMAO4K': { feeState: makeFeeState({ feeCurrent: 50 }) },
-                    'GDLL5G53N6YD5BBGRFCW6WSZ3BHIQ3L7FO4RBYER3IH7NCCMU7GCAXC6': { feeState: makeFeeState({ feeCurrent: 90 }) },
+                    'CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM': { feeState: makeFeeState({ feeCurrent: 10 }) },
+                    'CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4': { feeState: makeFeeState({ feeCurrent: 50 }) },
+                    'CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M': { feeState: makeFeeState({ feeCurrent: 90 }) },
                 },
             });
             const module = new FeeModule(client);
 
             const results = await module.compareFees(pairs);
 
-            expect(results[0].pairAddress).toBe('CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC');
+            expect(results[0].pairAddress).toBe('CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM');
             expect(results[0].currentFeeBps).toBe(10);
-            expect(results[1].pairAddress).toBe('CBQHNAXSI55GX2GN6D67GK7BHVPSLJUGZQEU7WJ5LKR5PNUCGLIMAO4K');
+            expect(results[1].pairAddress).toBe('CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4');
             expect(results[1].currentFeeBps).toBe(50);
-            expect(results[2].pairAddress).toBe('GDLL5G53N6YD5BBGRFCW6WSZ3BHIQ3L7FO4RBYER3IH7NCCMU7GCAXC6');
+            expect(results[2].pairAddress).toBe('CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M');
             expect(results[2].currentFeeBps).toBe(90);
         });
 
@@ -317,18 +309,17 @@ describe('FeeModule', () => {
 
         it('each result has correct isStale flag', async () => {
             const now = Math.floor(Date.now() / 1000);
+            const FRESH_ADDR = 'CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAMDR4';
+            const STALE_ADDR = 'CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAOLZM';
             const client = createMockClient({
                 pairs: {
-                    'GDLL5G53N6YD5BBGRFCW6WSZ3BHIQ3L7FO4RBYER3IH7NCCMU7GCAXC6': { feeState: makeFeeState({ lastUpdated: now - 60 }) },
-                    'CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC': { feeState: makeFeeState({ lastUpdated: now - 7200 }) },
+                    [FRESH_ADDR]: { feeState: makeFeeState({ lastUpdated: now - 60 }) },
+                    [STALE_ADDR]: { feeState: makeFeeState({ lastUpdated: now - 7200 }) },
                 },
             });
             const module = new FeeModule(client);
 
-            const results = await module.compareFees([
-                'GDLL5G53N6YD5BBGRFCW6WSZ3BHIQ3L7FO4RBYER3IH7NCCMU7GCAXC6',
-                'CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC'
-            ]);
+            const results = await module.compareFees([FRESH_ADDR, STALE_ADDR]);
 
             expect(results[0].isStale).toBe(false);
             expect(results[1].isStale).toBe(true);
