@@ -5,21 +5,25 @@ import { Network } from "../src/types/common";
 import { NETWORK_CONFIGS } from "../src/config";
 
 // Mock SorobanRpc.Server
-jest.mock("@stellar/stellar-sdk", () => {
-  const actual = jest.requireActual("@stellar/stellar-sdk");
-  return {
-    ...actual,
-    SorobanRpc: {
-      ...actual.SorobanRpc,
-      Server: jest.fn().mockImplementation((rpcUrl) => ({
-        rpcUrl,
-        getAccount: jest.fn(),
-        simulateTransaction: jest.fn(),
-        sendTransaction: jest.fn(),
-        getTransaction: jest.fn(),
-      })),
-    },
-  };
+jest.mock('@stellar/stellar-sdk', () => {
+    const actual = jest.requireActual('@stellar/stellar-sdk');
+    return {
+        ...actual,
+        SorobanRpc: {
+            ...actual.SorobanRpc,
+            Server: jest.fn().mockImplementation((rpcUrl) => ({
+                rpcUrl,
+                getAccount: jest.fn(),
+                simulateTransaction: jest.fn(),
+                sendTransaction: jest.fn(),
+                getTransaction: jest.fn(),
+            })),
+        },
+        Contract: jest.fn().mockImplementation((address) => ({
+            address,
+            call: jest.fn(),
+        })),
+    };
 });
 
 describe("Network Switching", () => {
