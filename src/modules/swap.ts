@@ -24,6 +24,7 @@ import {
 } from '@/utils/validation';
 import { resolveTokenIdentifier } from '@/utils/addresses';
 
+
 /**
  * Swap module -- builds, quotes, and executes token swaps.
  *
@@ -62,17 +63,17 @@ export class SwapModule {
     const rawPath = this.resolvePath(request);
     const path = rawPath.map((t) => resolveTokenIdentifier(t, passphrase));
 
-    if (path.length < 2) {
-      throw new ValidationError("Swap path must contain at least 2 tokens", {
-        path,
-      });
+    if (!isValidPath(path)) {
+      throw new ValidationError(
+        'Swap path must contain at least 2 tokens with no identical adjacent tokens',
+        { path },
+      );
     }
 
     if (path.length === 2) {
       return this.getDirectQuote(request, path);
     }
-
-    return this.getMultiHopSwapQuote(request, path);
+    return this.getMultiHopQuoteInternal(request, path);
   }
 
   /**
@@ -166,9 +167,9 @@ export class SwapModule {
     const passphrase = this.client.networkConfig.networkPassphrase;
     const path = request.path.map((t) => resolveTokenIdentifier(t, passphrase));
 
-    if (path.length < 3) {
+    if (!isValidPath(path) || path.length < 3) {
       throw new ValidationError(
-        'Multi-hop path must contain at least 3 tokens',
+        'Multi-hop path must contain at least 3 tokens with no identical adjacent tokens',
         { path },
       );
     }
@@ -410,7 +411,7 @@ export class SwapModule {
    *   totalFeeAmount = sum of per-hop fee amounts (denominated in each hop's tokenIn)
    *   compoundImpact = 1 - product((1 - impact_i/10000)) expressed in bps
    */
-  private async getMultiHopSwapQuote(
+  private async getMultiHopQuoteInternal(
     request: SwapRequest,
     path: string[],
   ): Promise<SwapQuote> {
