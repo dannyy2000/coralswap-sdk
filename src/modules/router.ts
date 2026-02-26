@@ -1,6 +1,6 @@
 import { CoralSwapClient } from '@/client';
 import { TradeType } from '@/types/common';
-import { HopResult, SwapQuote } from '@/types/swap';
+import { SwapQuote } from '@/types/swap';
 import { ValidationError } from '../errors';
 
 /**
@@ -75,7 +75,7 @@ export class RouterModule {
         if (!bestPath || quote.amountOut > bestPath.quote.amountOut) {
           bestPath = { path, quote };
         }
-      } catch (err) {
+      } catch {
         // Skip paths with insufficient liquidity or other errors
         continue;
       }
