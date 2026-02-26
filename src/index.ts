@@ -108,6 +108,7 @@ export type {
   RetryConfig,
   SimulationResult,
   SimulationResourceEstimate,
+  WaitNextLedgerOptions,
 } from "./utils";
 
 // Errors
