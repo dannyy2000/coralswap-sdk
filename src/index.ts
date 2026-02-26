@@ -99,7 +99,10 @@ export {
   validateNonNegativeAmount,
   validateSlippage,
   validateDistinctTokens,
-} from "@/utils";
+
+  isValidPath,
+} from './utils';
+
 
 export type {
   RetryConfig,
