@@ -45,6 +45,23 @@ export class CoralSwapClient {
   private readonly logger?: Logger;
 
   /**
+   * Helper to execute an async RPC function with exponential backoff retry.
+   *
+   * @param fn - The async function to execute
+   * @param label - A label for logging purposes
+   * @returns The result of the function
+   * @private
+   */
+  private async withRetry<T>(fn: () => Promise<T>, label: string): Promise<T> {
+    const options: RetryOptions = {
+      maxRetries: this.config.maxRetries ?? DEFAULTS.maxRetries,
+      retryDelayMs: this.config.retryDelayMs ?? DEFAULTS.retryDelayMs,
+      maxRetryDelayMs: this.config.maxRetryDelayMs ?? DEFAULTS.maxRetryDelayMs,
+    };
+    return withRetry(fn, options, this.logger, label);
+  }
+
+  /**
    * Create a new CoralSwapClient.
    *
    * @param config - SDK configuration. Provide `secretKey` for the built-in
@@ -140,6 +157,8 @@ export class CoralSwapClient {
         this.networkConfig.factoryAddress,
         this.networkConfig.rpcUrl,
         this.networkConfig.networkPassphrase,
+        this.getRetryOptions(),
+        this.logger,
       );
     }
     return this._factory;
@@ -157,6 +176,8 @@ export class CoralSwapClient {
         this.networkConfig.routerAddress,
         this.networkConfig.rpcUrl,
         this.networkConfig.networkPassphrase,
+        this.getRetryOptions(),
+        this.logger,
       );
     }
     return this._router;
@@ -170,6 +191,8 @@ export class CoralSwapClient {
       pairAddress,
       this.networkConfig.rpcUrl,
       this.networkConfig.networkPassphrase,
+      this.getRetryOptions(),
+      this.logger,
     );
   }
 
@@ -223,6 +246,8 @@ export class CoralSwapClient {
       lpTokenAddress,
       this.networkConfig.rpcUrl,
       this.networkConfig.networkPassphrase,
+      this.getRetryOptions(),
+      this.logger,
     );
   }
 
@@ -267,7 +292,10 @@ export class CoralSwapClient {
       const sourceKey = source ?? (await this.resolvePublicKey());
 
       this.logger?.debug("getAccount: fetching account", { sourceKey });
-      const account = await this.server.getAccount(sourceKey);
+      const account = await this.withRetry(
+        () => this.server.getAccount(sourceKey),
+        "getAccount",
+      );
       this.logger?.debug("getAccount: success", { sourceKey });
 
       let builder = new TransactionBuilder(account, {
@@ -285,7 +313,10 @@ export class CoralSwapClient {
         sourceKey,
         operationCount: operations.length,
       });
-      const sim = await this.server.simulateTransaction(tx);
+      const sim = await this.withRetry(
+        () => this.server.simulateTransaction(tx),
+        "simulateTransaction",
+      );
       if (!SorobanRpc.Api.isSimulationSuccess(sim)) {
         this.logger?.error("simulateTransaction: simulation failed", {
           simulation: sim,
@@ -320,7 +351,10 @@ export class CoralSwapClient {
         this.networkConfig.networkPassphrase,
       );
 
-      const response = await this.server.sendTransaction(signedTx);
+      const response = await this.withRetry(
+        () => this.server.sendTransaction(signedTx),
+        "sendTransaction",
+      );
 
       if (response.status === "ERROR") {
         this.logger?.error("sendTransaction: submission failed", { response });
@@ -385,7 +419,10 @@ export class CoralSwapClient {
     this.logger?.debug("simulateTransaction (dry-run): fetching account", {
       sourceKey,
     });
-    const account = await this.server.getAccount(sourceKey);
+    const account = await this.withRetry(
+      () => this.server.getAccount(sourceKey),
+      "simulateTransaction_getAccount",
+    );
 
     let builder = new TransactionBuilder(account, {
       fee: "100",
@@ -402,7 +439,10 @@ export class CoralSwapClient {
       sourceKey,
       operationCount: operations.length,
     });
-    const sim = await this.server.simulateTransaction(tx);
+    const sim = await this.withRetry(
+      () => this.server.simulateTransaction(tx),
+      "simulateTransaction_simulate",
+    );
     this.logger?.debug("simulateTransaction (dry-run): completed");
     return sim;
   }
@@ -421,7 +461,10 @@ export class CoralSwapClient {
    */
   async isHealthy(): Promise<boolean> {
     try {
-      const health = await this.server.getHealth();
+      const health = await this.withRetry(
+        () => this.server.getHealth(),
+        "getHealth",
+      );
       return health.status === "healthy";
     } catch {
       return false;
@@ -432,7 +475,21 @@ export class CoralSwapClient {
    * Get the current ledger number from the RPC.
    */
   async getCurrentLedger(): Promise<number> {
-    const info = await this.server.getLatestLedger();
+    const info = await this.withRetry(
+      () => this.server.getLatestLedger(),
+      "getLatestLedger",
+    );
     return info.sequence;
+  }
+
+  /**
+   * Internal helper to get structured retry options.
+   */
+  private getRetryOptions(): RetryOptions {
+    return {
+      maxRetries: this.config.maxRetries ?? DEFAULTS.maxRetries,
+      retryDelayMs: this.config.retryDelayMs ?? DEFAULTS.retryDelayMs,
+      maxRetryDelayMs: this.config.maxRetryDelayMs ?? DEFAULTS.maxRetryDelayMs,
+    };
   }
 }
