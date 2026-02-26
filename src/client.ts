@@ -12,9 +12,11 @@ import { FactoryClient } from '@/contracts/factory';
 import { PairClient } from '@/contracts/pair';
 import { RouterClient } from '@/contracts/router';
 import { LPTokenClient } from '@/contracts/lp-token';
-import { TokenListModule, SwapModule, LiquidityModule, RouterModule } from '@/modules';
+import { TokenListModule } from '@/modules/tokens';
+import { FactoryModule } from '@/modules/factory';
 import { KeypairSigner } from '@/utils/signer';
-export { KeypairSigner };
+import { TransactionPoller, PollingStrategy, PollingOptions } from '@/utils/polling';
+export { KeypairSigner, PollingStrategy, PollingOptions };
 
 /**
  * Default signer implementation that wraps a Stellar Keypair.
@@ -39,7 +41,25 @@ export class CoralSwapClient {
   private _publicKeyCache: string | null = null;
   private _factory: FactoryClient | null = null;
   private _router: RouterClient | null = null;
+  private _factoryModule: FactoryModule | null = null;
   private readonly logger?: Logger;
+
+  /**
+   * Helper to execute an async RPC function with exponential backoff retry.
+   *
+   * @param fn - The async function to execute
+   * @param label - A label for logging purposes
+   * @returns The result of the function
+   * @private
+   */
+  private async withRetry<T>(fn: () => Promise<T>, label: string): Promise<T> {
+    const options: RetryOptions = {
+      maxRetries: this.config.maxRetries ?? DEFAULTS.maxRetries,
+      retryDelayMs: this.config.retryDelayMs ?? DEFAULTS.retryDelayMs,
+      maxRetryDelayMs: this.config.maxRetryDelayMs ?? DEFAULTS.maxRetryDelayMs,
+    };
+    return withRetry(fn, options, this.logger, label);
+  }
 
   /**
    * Create a new CoralSwapClient.
@@ -47,6 +67,11 @@ export class CoralSwapClient {
    * @param config - SDK configuration. Provide `secretKey` for the built-in
    *   KeypairSigner, or pass a `signer` implementing the {@link Signer}
    *   interface for external wallets (Freighter, Albedo, etc.).
+   * @example
+   * const client = new CoralSwapClient({
+   *   network: Network.TESTNET,
+   *   secretKey: 'S...',
+   * });
    */
   constructor(config: CoralSwapConfig) {
     this.config = {
@@ -77,6 +102,16 @@ export class CoralSwapClient {
     }
 
     this.logger = config.logger;
+  }
+
+  /**
+   * Get the transaction poller instance.
+   */
+  poller(): TransactionPoller {
+    if (!this._poller) {
+      this._poller = new TransactionPoller(this.server, this.logger);
+    }
+    return this._poller;
   }
 
   /**
@@ -122,6 +157,8 @@ export class CoralSwapClient {
         this.networkConfig.factoryAddress,
         this.networkConfig.rpcUrl,
         this.networkConfig.networkPassphrase,
+        this.getRetryOptions(),
+        this.logger,
       );
     }
     return this._factory;
@@ -139,6 +176,8 @@ export class CoralSwapClient {
         this.networkConfig.routerAddress,
         this.networkConfig.rpcUrl,
         this.networkConfig.networkPassphrase,
+        this.getRetryOptions(),
+        this.logger,
       );
     }
     return this._router;
@@ -152,6 +191,8 @@ export class CoralSwapClient {
       pairAddress,
       this.networkConfig.rpcUrl,
       this.networkConfig.networkPassphrase,
+      this.getRetryOptions(),
+      this.logger,
     );
   }
 
@@ -160,6 +201,8 @@ export class CoralSwapClient {
    *
    * @param network - The target network.
    * @param rpcUrl - Optional override for the RPC URL.
+   * @example
+   * client.setNetwork(Network.MAINNET);
    */
   setNetwork(network: Network, rpcUrl?: string): void {
     this.network = network;
@@ -174,14 +217,22 @@ export class CoralSwapClient {
     this._factory = null;
     this._router = null;
 
+    // Reset factory module cache
+    if (this._factoryModule) {
+      this._factoryModule.clearCache();
+    }
+
     // Refresh signer if using built-in KeypairSigner
     if (this.config.secretKey) {
-      const kpSigner = new KeypairSigner(this.config.secretKey, this.networkConfig.networkPassphrase);
+      const kpSigner = new KeypairSigner(
+        this.config.secretKey,
+        this.networkConfig.networkPassphrase,
+      );
       this.signer = kpSigner;
       this._publicKeyCache = kpSigner.publicKeySync;
     }
 
-    this.logger?.info('setNetwork: network switched', {
+    this.logger?.info("setNetwork: network switched", {
       network: this.network,
       rpcUrl: this.networkConfig.rpcUrl,
     });
@@ -195,6 +246,8 @@ export class CoralSwapClient {
       lpTokenAddress,
       this.networkConfig.rpcUrl,
       this.networkConfig.networkPassphrase,
+      this.getRetryOptions(),
+      this.logger,
     );
   }
 
@@ -206,35 +259,30 @@ export class CoralSwapClient {
   }
 
   /**
-   * Create a SwapModule for token swaps.
+   * Access the Factory module (cached lookups).
    */
-  swap(): SwapModule {
-    return new SwapModule(this);
-  }
-
-  /**
-   * Create a LiquidityModule for LP operations.
-   */
-  liquidity(): LiquidityModule {
-    return new LiquidityModule(this);
-  }
-
-  /**
-   * Create a RouterModule for off-chain routing.
-   */
-  routing(): RouterModule {
-    return new RouterModule(this);
+  factoryModule(): FactoryModule {
+    if (!this._factoryModule) {
+      this._factoryModule = new FactoryModule(this);
+    }
+    return this._factoryModule;
   }
 
   /**
    * Lookup the pair address for a token pair via the factory.
    */
   async getPairAddress(tokenA: string, tokenB: string): Promise<string | null> {
-    return this.factory.getPair(tokenA, tokenB);
+    return this.factoryModule().getPairAddress(tokenA, tokenB);
   }
 
   /**
    * Build, simulate, sign and submit a transaction.
+   *
+   * @param operations - Array of Soroban operations to include
+   * @param source - Optional source account override
+   * @returns Resolves with transaction hash and ledger or an error
+   * @example
+   * const result = await client.submitTransaction([op]);
    */
   async submitTransaction(
     operations: xdr.Operation[],
@@ -244,7 +292,10 @@ export class CoralSwapClient {
       const sourceKey = source ?? (await this.resolvePublicKey());
 
       this.logger?.debug("getAccount: fetching account", { sourceKey });
-      const account = await this.server.getAccount(sourceKey);
+      const account = await this.withRetry(
+        () => this.server.getAccount(sourceKey),
+        "getAccount",
+      );
       this.logger?.debug("getAccount: success", { sourceKey });
 
       let builder = new TransactionBuilder(account, {
@@ -262,7 +313,10 @@ export class CoralSwapClient {
         sourceKey,
         operationCount: operations.length,
       });
-      const sim = await this.server.simulateTransaction(tx);
+      const sim = await this.withRetry(
+        () => this.server.simulateTransaction(tx),
+        "simulateTransaction",
+      );
       if (!SorobanRpc.Api.isSimulationSuccess(sim)) {
         this.logger?.error("simulateTransaction: simulation failed", {
           simulation: sim,
@@ -297,7 +351,10 @@ export class CoralSwapClient {
         this.networkConfig.networkPassphrase,
       );
 
-      const response = await this.server.sendTransaction(signedTx);
+      const response = await this.withRetry(
+        () => this.server.sendTransaction(signedTx),
+        "sendTransaction",
+      );
 
       if (response.status === "ERROR") {
         this.logger?.error("sendTransaction: submission failed", { response });
@@ -330,72 +387,28 @@ export class CoralSwapClient {
   }
 
   /**
-   * Poll for transaction completion with configurable retries.
+   * Poll for transaction confirmation using the customized poller.
    */
   private async pollTransaction(
     txHash: string,
   ): Promise<Result<{ txHash: string; ledger: number }>> {
-    const maxRetries = this.config.maxRetries ?? DEFAULTS.maxRetries;
-    const retryDelay = this.config.retryDelayMs ?? DEFAULTS.retryDelayMs;
-
-    for (let attempt = 0; attempt < maxRetries * 10; attempt++) {
-      this.logger?.debug("pollTransaction: polling attempt", {
-        txHash,
-        attempt: attempt + 1,
-        maxAttempts: maxRetries * 10,
-      });
-      const status = await this.server.getTransaction(txHash);
-
-      if (status.status === "SUCCESS") {
-        this.logger?.info("pollTransaction: confirmed", {
-          txHash,
-          ledger: status.ledger,
-        });
-        return {
-          success: true,
-          data: {
-            txHash,
-            ledger: status.ledger ?? 0,
-          },
-          txHash,
-        };
-      }
-
-      if (status.status === "FAILED") {
-        this.logger?.error("pollTransaction: transaction failed on-chain", {
-          txHash,
-          status,
-        });
-        return {
-          success: false,
-          error: {
-            code: "TX_FAILED",
-            message: "Transaction failed on-chain",
-            details: { status },
-          },
-          txHash,
-        };
-      }
-
-      await new Promise((resolve) => setTimeout(resolve, retryDelay));
-    }
-
-    this.logger?.error("pollTransaction: timed out", {
-      txHash,
-      attempts: maxRetries * 10,
+    return this.poller().poll(txHash, {
+      strategy: this.config.pollingStrategy ?? DEFAULTS.pollingStrategy,
+      interval: this.config.pollingIntervalMs ?? DEFAULTS.pollingIntervalMs,
+      maxAttempts: this.config.maxPollingAttempts ?? DEFAULTS.maxPollingAttempts,
+      backoffFactor: this.config.pollingBackoffFactor ?? DEFAULTS.pollingBackoffFactor,
+      maxInterval: this.config.maxPollingIntervalMs ?? DEFAULTS.maxPollingIntervalMs,
     });
-    return {
-      success: false,
-      error: {
-        code: "TX_TIMEOUT",
-        message: `Transaction polling timed out after ${maxRetries * 10} attempts`,
-      },
-      txHash,
-    };
   }
 
   /**
    * Simulate a transaction without submitting (dry-run).
+   *
+   * @param operations - Array of operations to simulate
+   * @param source - Optional source account override
+   * @returns Simulation response directly from the RPC
+   * @example
+   * const sim = await client.simulateTransaction([op]);
    */
   async simulateTransaction(
     operations: xdr.Operation[],
@@ -406,7 +419,10 @@ export class CoralSwapClient {
     this.logger?.debug("simulateTransaction (dry-run): fetching account", {
       sourceKey,
     });
-    const account = await this.server.getAccount(sourceKey);
+    const account = await this.withRetry(
+      () => this.server.getAccount(sourceKey),
+      "simulateTransaction_getAccount",
+    );
 
     let builder = new TransactionBuilder(account, {
       fee: "100",
@@ -423,7 +439,10 @@ export class CoralSwapClient {
       sourceKey,
       operationCount: operations.length,
     });
-    const sim = await this.server.simulateTransaction(tx);
+    const sim = await this.withRetry(
+      () => this.server.simulateTransaction(tx),
+      "simulateTransaction_simulate",
+    );
     this.logger?.debug("simulateTransaction (dry-run): completed");
     return sim;
   }
@@ -442,7 +461,10 @@ export class CoralSwapClient {
    */
   async isHealthy(): Promise<boolean> {
     try {
-      const health = await this.server.getHealth();
+      const health = await this.withRetry(
+        () => this.server.getHealth(),
+        "getHealth",
+      );
       return health.status === "healthy";
     } catch {
       return false;
@@ -453,7 +475,21 @@ export class CoralSwapClient {
    * Get the current ledger number from the RPC.
    */
   async getCurrentLedger(): Promise<number> {
-    const info = await this.server.getLatestLedger();
+    const info = await this.withRetry(
+      () => this.server.getLatestLedger(),
+      "getLatestLedger",
+    );
     return info.sequence;
+  }
+
+  /**
+   * Internal helper to get structured retry options.
+   */
+  private getRetryOptions(): RetryOptions {
+    return {
+      maxRetries: this.config.maxRetries ?? DEFAULTS.maxRetries,
+      retryDelayMs: this.config.retryDelayMs ?? DEFAULTS.retryDelayMs,
+      maxRetryDelayMs: this.config.maxRetryDelayMs ?? DEFAULTS.maxRetryDelayMs,
+    };
   }
 }
